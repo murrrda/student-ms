@@ -1,4 +1,5 @@
 #include "enrollment.hpp"
+#include "config.h"
 
 int menu();
 void insertNewStudent(sql::Connection*, const Student&);
@@ -9,13 +10,19 @@ void deleteStudentByIndex(sql::Connection*, std::string);
 void deleteCourse(sql::Connection*, std::string);
 void listEnrollments(sql::Connection*);
 void enrollStudentIntoCourse(sql::Connection*, const std::string&, const std::string&);
+int updateStudentInfoMenu();
+void updateStudentFirstName(sql::Connection*, int, const std::string&);
+void updateStudentLastName(sql::Connection*, int, const std::string&);
+void updateStudentIndex(sql::Connection*, int, const std::string&);
+int getStudentIdByIndex(sql::Connection*, const std::string&);
+void updateStudentByAge(sql::Connection*, int, int);
 
 int main() {
 	
 	sql::Driver *driver;
 	sql::Connection *con;
 	driver = get_driver_instance();
-	con = driver->connect("tcp://127.0.0.1:3306", "mrda", "mrda");
+	con = driver->connect("tcp://127.0.0.1:3306", USERNAME, PASSWORD);
 	con->setSchema("studentMS");
 
 	int x = 0;	
@@ -24,6 +31,9 @@ int main() {
 	Student student_ex;
 	Courses course_ex;
 	std::string string2 = "";
+	int number2 = 0;
+	int newAge = 0;
+	
 	do{
 		x = menu();
 		switch(x) {
@@ -80,6 +90,43 @@ int main() {
 				std::cin >> string2;
 				enrollStudentIntoCourse(con, string, string2);
 				break;
+			case 9:
+				do{
+				std::cout << "Enter student's Index: ";
+				std::cin >> string2;
+				number2 = getStudentIdByIndex(con, string2);
+				} while(number2 == 0);
+				do{
+				number = updateStudentInfoMenu(); 
+					switch(number) {
+						case 0:
+							std::cout << "Exiting...\n";
+							break;
+						case 1: 
+							std::cout << "Enter new first name: ";
+							std::cin >> string;
+							updateStudentFirstName(con, number2, string);
+							break;
+						case 2: 
+							std::cout << "Enter new last name: ";
+							std::cin >> string;
+							updateStudentLastName(con, number2, string);
+							break;
+						case 3: 
+							std::cout << "Enter new index: ";
+							std::cin >> string;
+							updateStudentIndex(con, number2, string);
+							break;						
+						case 4: 
+							std::cout << "Enter new age: ";
+							std::cin >> newAge;
+							updateStudentByAge(con, number2, newAge);
+							break;
+						default:
+							std::cout << "Wrong option\n";
+							break;
+					}
+				} while(number != 0);
 			default:
 				std::cout << "You chose the wrong option!\n";
 		}
@@ -101,13 +148,25 @@ int menu() {
 	std::cout << "\t\t6. Delete course\n";
 	std::cout << "\t\t7. List enrollments\n";
 	std::cout << "\t\t8. Enroll student into course\n";
+	std::cout << "\t\t9. Update student information\n";
 	std::cout << "";	
     int opcija;
     std::cin >> opcija;
 
     return opcija;
 }
+int updateStudentInfoMenu() {
+	int choice;
+    std::cout << "\n\t Choose one option:\n";
+	std::cout << "\t\t0. Back to menu\n";
+    std::cout << "\t\t1. Update First Name\n";
+    std::cout << "\t\t2. Update Last Name\n";
+    std::cout << "\t\t3. Update Index\n";
+    std::cout << "\t\t4. Update age\n";
+	std::cin >> choice;
 
+	return choice;
+}
 void insertNewStudent(sql::Connection *con, const Student& student_ex) {
 	sql::Statement *stmt;
 	stmt = con->createStatement();
@@ -180,7 +239,6 @@ void deleteCourse(sql::Connection* con, std::string course_name) {
 	delete stmt;
 }
 void listEnrollments(sql::Connection* con) {
-		//TODO
 	sql::Statement* stmt;
 	sql::ResultSet* res;
 	stmt = con->createStatement();
@@ -248,4 +306,66 @@ void enrollStudentIntoCourse(sql::Connection* con, const std::string& index, con
 	} catch (sql::SQLException &e) {
         std::cerr << "Enrollment failed: " << e.what() << std::endl;
     }
+}
+
+
+void updateStudentFirstName(sql::Connection* con, int student_id, const std::string& newFirstName) {
+	if(student_id != 0) {
+		sql::PreparedStatement* stmtName = con->prepareStatement("UPDATE students SET first_name= ? WHERE student_id = ?");
+		stmtName->setString(1, newFirstName);
+		stmtName->setInt(2, student_id);
+		stmtName->executeUpdate();
+
+		delete stmtName;
+	}
+	
+}
+void updateStudentLastName(sql::Connection* con, int student_id, const std::string& newLastName) {
+	if(student_id != 0) {
+		sql::PreparedStatement* stmtName = con->prepareStatement("UPDATE students SET last_name= ? WHERE student_id = ?");
+		stmtName->setString(1, newLastName);
+		stmtName->setInt(2, student_id);
+		stmtName->executeUpdate();
+
+		delete stmtName;
+	}
+	
+}
+void updateStudentIndex(sql::Connection* con, int student_id, const std::string& newIndex) {
+	if(student_id != 0) {
+		sql::PreparedStatement* stmtName = con->prepareStatement("UPDATE students SET student_index= ? WHERE student_id = ?");
+		stmtName->setString(1, newIndex);
+		stmtName->setInt(2, student_id);
+		stmtName->executeUpdate();
+
+		delete stmtName;
+	}
+	
+}
+
+int getStudentIdByIndex(sql::Connection* con, const std::string& index) {
+	sql::PreparedStatement* stmt = con->prepareStatement("SELECT student_id FROM students WHERE student_index = ?");
+	stmt->setString(1, index);
+	sql::ResultSet* res = stmt->executeQuery();
+
+	int student_id = 0;
+
+	if(res->next()) {
+		student_id = res->getInt("student_id");
+	}
+
+	delete stmt;
+	delete res;
+	
+	return student_id;
+}
+void updateStudentByAge(sql::Connection* con, int student_id, int age) {
+	if(student_id != 0) {
+		sql::PreparedStatement* stmtName = con->prepareStatement("UPDATE students SET age = ? WHERE student_id = ?");
+		stmtName->setInt(1, age);
+		stmtName->setInt(2, student_id);
+		stmtName->executeUpdate();
+
+		delete stmtName;
+	}
 }
