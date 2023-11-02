@@ -16,6 +16,8 @@ void updateStudentLastName(sql::Connection*, int, const std::string&);
 void updateStudentIndex(sql::Connection*, int, const std::string&);
 int getStudentIdByIndex(sql::Connection*, const std::string&);
 void updateStudentByAge(sql::Connection*, int, int);
+/*	TODO
+	updateCourseInfo.. */
 
 int main() {
 	
