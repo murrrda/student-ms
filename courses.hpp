@@ -3,17 +3,14 @@
 
 class Courses{
 	private:
-		int course_id;
 		std::string name;
 		std::string instructor;
 	public:
-		Courses(std::string name = "fake name", std::string instructor = "fake instructor") {
-			
+		Courses(const std::string& name = "fake name", const std::string& instructor = "fake instructor") {
 			this->name = name;
 			this->instructor = instructor;
 		}
 		Courses(const Courses& course) {
-			course_id = course.course_id;
 			name = course.name;
 			instructor = course.instructor;
 		}
@@ -23,10 +20,6 @@ class Courses{
 		}
 		std::string get_instructor() const {
 			return instructor;
-		}
-		
-		void set_id(int new_id){
-			course_id = new_id;
 		}
 		void set_name(std::string new_name) {
 			name = new_name;
