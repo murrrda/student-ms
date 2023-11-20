@@ -84,6 +84,30 @@ public:
         
         return student_id;
     }
+    void listMyCourses(sql::Connection* con) {
+        int student_id = getStudentIdByIndex(con);
+        sql::PreparedStatement* stmt = con->prepareStatement("SELECT * FROM enrollment WHERE student_id = ?");
+        stmt->setInt(1, student_id);
+        sql::ResultSet* res = stmt->executeQuery();
+
+        int i = 0;
+        while(res->next()) {
+            sql::PreparedStatement* stmt2 = con->prepareStatement("select course_name, instructor from courses where course_id = ?");
+            stmt2->setInt(1, res->getInt("course_id"));
+            sql::ResultSet* res2 = stmt2->executeQuery();
+            i++;
+            if(res2->next()) {
+                std::cout << i << "." << '\t'  << "Course name: " << res2->getString("course_name");
+                std::cout << ", Instructor: " << res2->getString("instructor");
+                std::cout << '\n';
+                delete res2;
+                delete stmt2;
+            }
+        }
+
+        delete res;
+        delete stmt;
+    }
     void listStudentsEnrolledWithMe(sql::Connection* con) {
          int student_id = getStudentIdByIndex(con);
         sql::PreparedStatement* stmt = con->prepareStatement(

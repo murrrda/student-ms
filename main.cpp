@@ -6,6 +6,7 @@
 #include "enrollment.hpp"
 #include "admin.hpp"
 #include "config.h"
+#include <bcrypt/BCrypt.hpp>
 
 int menuAdmin();
 int menuStudent();
@@ -41,6 +42,7 @@ int main() {
     std::string courseName = "";
     int prompt2 = 0;
     std::string newInstructor = "";
+    std::string hashedPassword = "";
     do{
         std::cout << "1. Login" << '\n';
         std::cout << "2. Register" << '\n';
@@ -53,10 +55,9 @@ int main() {
                     std::cout << "password: ";
                     std::cin >> password;
                     usr.setUsername(username);
+                    hashedPassword = BCrypt::generateHash(password);
                     usr.setPassword(password);
                     x = authenticate(con, usr);
-                    
-                    std::cout << std::get<0>(x) << " " << std::get<1>(x);
                 } while(x == std::make_tuple(2, 0));
                 break;
             case 2: 
@@ -84,8 +85,10 @@ int main() {
                                 student.set_last_name(lastName);
                                 student.set_first_name(firstName);
 
+                                hashedPassword = BCrypt::generateHash(password);
+
                                 usr.setUsername(username);
-                                usr.setPassword(password);
+                                usr.setPassword(hashedPassword);
                                 createUserStudent(con, usr, student); //inserts new data in sql tables
 
                                 x = authenticate(con, usr);
@@ -106,8 +109,10 @@ int main() {
                                 std::cout << "Last name: ";
                                 std::cin >> lastName;
 
+
+                                hashedPassword = BCrypt::generateHash(password);
                                 usr.setUsername(username);
-                                usr.setPassword(password);
+                                usr.setPassword(hashedPassword);
 
                                 admin.setFirstName(firstName);
                                 admin.setLastName(lastName);
@@ -149,9 +154,12 @@ int main() {
                         student.listCourses(con);
                         break;
                     case 2:
+                        student.listMyCourses(con);
+                        break;
+                    case 3:
                         student.listStudentsEnrolledWithMe(con);
                         break;                
-                    case 3:
+                    case 4:
                         student.enrollInCourse(con);
                         break;
                     default:
@@ -273,32 +281,37 @@ int menuStudent() {
     std::cout << "\n\t Choose one option:\n";
     std::cout << "\t\t0. Exit program\n";
     std::cout << "\t\t1. List all courses\n";
-    std::cout << "\t\t2. List students enrolled on your courses\n";
-    std::cout << "\t\t3. Enroll in course \n";
+    std::cout << "\t\t2. List my courses\n";
+    std::cout << "\t\t3. List students enrolled on your courses\n";
+    std::cout << "\t\t4. Enroll in course \n";
     int opcija;
     std::cin >> opcija;
 
     return opcija;
 }
 std::tuple<int, int> authenticate(sql::Connection* con, const User& usr) {
-    sql::PreparedStatement* auth = con->prepareStatement("SELECT * FROM users WHERE username = ? AND password = ?");
+    sql::PreparedStatement* auth = con->prepareStatement("SELECT * FROM users WHERE username = ?");
     auth->setString(1, usr.getUsername());
-    auth->setString(2, usr.getPassword());
+    //auth->setString(2, usr.getPassword());
     sql::ResultSet* res =  auth->executeQuery();
 
     int resInt = 0;
     if(res->next()) {
-        if(res->getInt("admin_id") == 0) {
-            resInt = res->getInt("student_id");
-            delete auth;
-            delete res;
-            return std::make_tuple(0, resInt);
-        }
-        else {
-            resInt = res->getInt("admin_id");
-            delete auth;
-            delete res;
-            return std::make_tuple(1, resInt); 
+        std::string storedHashedPassword = res->getString("password"); 
+
+        if(BCrypt::validatePassword(usr.getPassword(), storedHashedPassword)) {
+            if(res->getInt("admin_id") == 0) {
+                resInt = res->getInt("student_id");
+                delete auth;
+                delete res;
+                return std::make_tuple(0, resInt);
+            }
+            else {
+                resInt = res->getInt("admin_id");
+                delete auth;
+                delete res;
+                return std::make_tuple(1, resInt); 
+            }
         }
     }
     delete auth;
