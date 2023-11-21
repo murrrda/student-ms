@@ -153,12 +153,11 @@ public:
 	delete stmt;
     }
     void deleteStudent(sql::Connection* con, int student_id) {
-	sql::Statement* stmt;
-	stmt = con->createStatement();
-	std::string query = "delete from students where student_index = '" + std::to_string(student_id)+ "'";
+        sql::PreparedStatement* stmt = con->prepareStatement("delete from students where student_id = ?");
+        stmt->setInt(1, student_id);
+        stmt->executeUpdate();
 
-	stmt->execute(query);
-	delete stmt;
+        delete stmt;
     }
     void deleteCourse(sql::Connection* con, std::string course_name) {
 	sql::Statement* stmt;

@@ -90,7 +90,8 @@ int main() {
                                 usr.setUsername(username);
                                 usr.setPassword(hashedPassword);
                                 createUserStudent(con, usr, student); //inserts new data in sql tables
-
+                                
+                                usr.setPassword(password);
                                 x = authenticate(con, usr);
                             }
                             else {
@@ -119,12 +120,16 @@ int main() {
 
                                 createUserAdmin(con, usr, admin); //inserts new data in sql tables
 
+                                usr.setPassword(password);
                                 x = authenticate(con, usr);
                             }
                             else {
                                 std::cout << "Username already taken!\n";
                                 registerType = 0;
                             }
+                            break;
+                        default:
+                            std::cout << "Wrong option!\n";
                             break;
                     }
                 }while(registerType < 1 || registerType > 2);
@@ -170,7 +175,7 @@ int main() {
         }
     }   
 
-    else {              //is admin
+    else if (std::get<0>(x) == 1) {              //is admin
         sql::PreparedStatement* stmt = con->prepareStatement("SELECT first_name, last_name FROM admins WHERE admin_id = ?");
         stmt->setInt(1, std::get<1>(x));
         sql::ResultSet* res = stmt->executeQuery();
@@ -237,6 +242,7 @@ int main() {
                     break;
                 case 5:
                     std::cout << "Choose one option: \n1. By index\n2. By ID";
+                    std::cin >> prompt2;
                     switch (prompt2) {
                         case 1:
                             std::cin >> index;
@@ -292,28 +298,37 @@ int menuStudent() {
 std::tuple<int, int> authenticate(sql::Connection* con, const User& usr) {
     sql::PreparedStatement* auth = con->prepareStatement("SELECT * FROM users WHERE username = ?");
     auth->setString(1, usr.getUsername());
-    //auth->setString(2, usr.getPassword());
-    sql::ResultSet* res =  auth->executeQuery();
+    sql::ResultSet* res = auth->executeQuery();
 
     int resInt = 0;
-    if(res->next()) {
-        std::string storedHashedPassword = res->getString("password"); 
+    if (res->next()) {
+        std::string storedHashedPassword = res->getString("password");
 
-        if(BCrypt::validatePassword(usr.getPassword(), storedHashedPassword)) {
-            if(res->getInt("admin_id") == 0) {
+        std::cout << "Input Password: " << usr.getPassword() << std::endl;
+        std::cout << "Stored Password: " << storedHashedPassword << std::endl;
+
+        if (BCrypt::validatePassword(usr.getPassword(), storedHashedPassword)) {
+            if (!res->isNull("student_id")) {
                 resInt = res->getInt("student_id");
+                std::cout << "Authentication successful. Student ID: " << resInt << std::endl;
                 delete auth;
                 delete res;
                 return std::make_tuple(0, resInt);
-            }
-            else {
+            } else if (!res->isNull("admin_id")) {
                 resInt = res->getInt("admin_id");
+                std::cout << "Authentication successful. Admin ID: " << resInt << std::endl;
                 delete auth;
                 delete res;
-                return std::make_tuple(1, resInt); 
+                return std::make_tuple(1, resInt);
             }
+        } else {
+            std::cout << "Password validation failed." << std::endl;
         }
     }
+    else {
+        std::cout << "No matching user found." << std::endl;
+    }
+
     delete auth;
     delete res;
     return std::make_tuple(2, 0);
@@ -334,7 +349,6 @@ int menuAdmin() {
     return opcija;
 }
 void createUserStudent(sql::Connection* con, const User& usr, const Student& student) {
-    std::cout << "\n\n\n" << student.get_first_name();
     //insert student
     sql::PreparedStatement* stmt = con->prepareStatement("INSERT INTO students (first_name, last_name, student_index, age) VALUES (?, ?, ?, ?)");
     stmt->setString(1, student.get_first_name());
@@ -348,7 +362,7 @@ void createUserStudent(sql::Connection* con, const User& usr, const Student& stu
     int student_id = 0;
     sql::PreparedStatement* getId = con->prepareStatement("SELECT student_id FROM students where student_index = ?");
     getId->setString(1, student.get_index());
-    sql::ResultSet* res = stmt->executeQuery();
+    sql::ResultSet* res = getId->executeQuery();
 
     if(res->next())
         student_id = res->getInt("student_id");
@@ -364,6 +378,7 @@ void createUserStudent(sql::Connection* con, const User& usr, const Student& stu
     stmt2->executeUpdate();
 
     delete stmt2;
+    con->commit();
 }
 void createUserAdmin(sql::Connection* con, const User& usr, const Admin& admin) {
     //insert admin 

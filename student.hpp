@@ -30,7 +30,6 @@ public:
     }
     
     void set_first_name(std::string new_name) {
-        std::cout << "Postavljam prvo ime!\n";
             first_name = new_name;
     }
     
