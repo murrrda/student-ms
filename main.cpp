@@ -304,9 +304,6 @@ std::tuple<int, int> authenticate(sql::Connection* con, const User& usr) {
     if (res->next()) {
         std::string storedHashedPassword = res->getString("password");
 
-        std::cout << "Input Password: " << usr.getPassword() << std::endl;
-        std::cout << "Stored Password: " << storedHashedPassword << std::endl;
-
         if (BCrypt::validatePassword(usr.getPassword(), storedHashedPassword)) {
             if (!res->isNull("student_id")) {
                 resInt = res->getInt("student_id");
